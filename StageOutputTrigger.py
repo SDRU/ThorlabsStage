@@ -3,13 +3,16 @@
 Created on Wed Dec  1 14:54:01 2021
 
 @author: Sandora and Thorlabs
+
+Stage outputs a TTL pulse at pos1 and pos2
+Sandra and Cedric used it to trigger the vuvuzela shutter
 """
 
 
 # USER DEFINED PARAMETERS
 # loop settings
-pos1=15 # mm
-pos2=45 # mm
+pos1=0 # mm
+pos2=50 # mm
 max_velocity=8 # mm/s
 
 
@@ -22,7 +25,7 @@ from pylablib.devices import Thorlabs
 import sys
 
 
-sys.path.append("C:\\Users\\OceanSpectro\\AppData\\Roaming\\Python\\Python38\\site-packages\\pylablib\\devices\\Thorlabs\\")
+# sys.path.append("C:\\Users\\Sandra Drusova\\AppData\\Roaming\\Python\\Python38\\site-packages\\pylablib\\devices\\Thorlabs\\")
 devices = Thorlabs.list_kinesis_devices()
 print('Devices found: ',devices)
 
@@ -54,7 +57,7 @@ try:
     start_pos_rev=int(pos2/STEP)
     interval_rev=int(50/STEP)
     num_pulses_rev=1
-    pulse_width=int(1e5) # in us
+    pulse_width=int(5e5) # in us
     num_cycles=int(1e5)
         
     stage.set_triggerout_position_params(start_pos_fw,interval_fw,num_pulses_fw,start_pos_rev,interval_rev,num_pulses_rev,pulse_width,num_cycles)

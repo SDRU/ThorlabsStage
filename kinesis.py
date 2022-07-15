@@ -683,7 +683,7 @@ class MFF(KinesisDevice):
     
 
 # OWN DEFINITIONS
-TTriggerParams = collections.namedtuple("TTriggerParams", ["tr1_mode","tr1_polarity","tr2_mode","tr2_polarity"])
+TTriggerParams = collections.namedtuple("TTriggerParams", ["trin_mode","trin_polarity","trout_mode","trout_polarity"])
 TTriggeroutParams = collections.namedtuple("TTriggeroutParams",["start_pos_fw","interval_fw","num_pulses_fw","start_pos_rev","interval_rev","num_pulses_rev","pulse_width","num_cycles"])
 TMotorOutputParams = collections.namedtuple("TMotorOutputParams", ["cont_curr", "energy_lim", "motor_lim", "motor_bias"])
 
@@ -861,14 +861,12 @@ class KinesisMotor(KinesisDevice):
     # MY OWN FUNCTIONS
     def get_trigger_params(self):
         params=self.query(0x0524,param1=0x01,param2=0x00,source=0x01,dest=0x50).data
-        tr1_mode,tr1_polarity,tr2_mode,tr2_polarity=struct.unpack("<HHHH",params[2:10])
-        return TTriggerParams(tr1_mode,tr1_polarity,tr2_mode,tr2_polarity)
+        trin_mode,trin_polarity,trout_mode,trout_polarity=struct.unpack("<HHHH",params[2:10])
+        return TTriggerParams(trin_mode,trin_polarity,trout_mode,trout_polarity)
     
-    def set_trigger_params(self,tr1_mode=None,tr1_polarity=None,tr2_mode=None,tr2_polarity=None):
+    def set_trigger_params(self,trin_mode=None,trin_polarity=None,trout_mode=None,trout_polarity=None):
         """
-        There are two SMA ports which can be configured as in/out trigger
-        
-        Trigger IN modes
+        trin_mode
         0x00 The trigger IO is disabled
         0x01 General purpose logic input 
         0x02 Input trigger for relative move.
@@ -877,7 +875,7 @@ class KinesisMotor(KinesisDevice):
         
         polarity 1/0 means rising or falling edge
         
-        Trigger OUT modes
+        trout_mode
         0x0A General purpose logic output
         0x0B Trigger output active (level) when motor 'in motion'. 
         0x0C Trigger output active (level) when motor at 'max velocity'.
@@ -888,7 +886,7 @@ class KinesisMotor(KinesisDevice):
 
  
         channel=b'\x01\x00'
-        message=channel+tr1_mode+b'\x00'+tr1_polarity+b'\x00'+tr2_mode+b'\x00'+tr2_polarity+b'\x00'
+        message=channel+trin_mode+b'\x00'+trin_polarity+b'\x00'+trout_mode+b'\x00'+trout_polarity+b'\x00'
         
         # extra padding with zero bytes at the end
         params=self.query(0x0524,param1=0x01,param2=0x00,source=0x01,dest=0x50).data
@@ -927,30 +925,16 @@ class KinesisMotor(KinesisDevice):
         
     def get_triggerout_position_params(self):
         params=self.query(0x0527,param1=0x01,param2=0x00,source=0x01,dest=0x50).data
-        start_pos_fw,interval_fw,num_pulses_fw,start_pos_rev,interval_rev,num_pulses_rev,pulse_width,num_cycles=struct.unpack("<LLLLLLLL",params[2:34])
+        start_pos_fw,interval_fw,num_pulses_fw,start_pos_rev,interval_rev,num_pulses_rev,pulse_width,num_cycles=struct.unpack("<LLLLLLLL",params[8:40])
         return TTriggeroutParams(start_pos_fw,interval_fw,num_pulses_fw,start_pos_rev,interval_rev,num_pulses_rev,pulse_width,num_cycles)
         
     def set_triggerout_position_params(self,start_pos_fw=None,interval_fw=None,num_pulses_fw=None,start_pos_rev=None,interval_rev=None,num_pulses_rev=None,pulse_width=None,num_cycles=None):
         """
-        Stage generates a 5V TTL pulse when the stage is at specified positions
-        
-        FORWARD DIRECTION
-        start_pos_fw        Start position for the pulse (in steps)
-        interval_fw         Interval in distance when the next pulse occurs (in steps)
-        num_pulses_fw       Number of pulses generated
-        
-        BACKWARD DIRECTION
-        start_pos_rev       Start position for the pulse (in steps)
-        interval_rev        Interval in distance when the next pulse occurs (in steps)
-        num_pulses_rev      Number of pulses generated
-        
-        pulse_width         Time duration of each pulse (in microseconds)
-        num_cycles          Number of times to repeat the defined sequence
-        
-        WARNING: The stage will not generate another trigger if number of pulses per cycles could not be completed
-        
+        All variables in the command should be in number of counts, function input needs to be scaled
+        The stage will not generate another trigger if number of pulses per cycles could not be completed
         """
-        message=struct.pack("<HLLLLLLLL",1,start_pos_fw,interval_fw,num_pulses_fw,start_pos_rev,interval_rev,num_pulses_rev,pulse_width,num_cycles)
+        CT=2000 # conversion to mm
+        message=struct.pack("<HLLLLLLLL",1,int(start_pos_fw*CT),int(interval_fw*CT),int(num_pulses_fw),int(start_pos_rev*CT),int(interval_rev*CT),int(num_pulses_rev),int(pulse_width),int(num_cycles))
     
         # extra padding with zero bytes at the end
         params=self.query(0x0527,param1=0x01,param2=0x00,source=0x01,dest=0x50).data
